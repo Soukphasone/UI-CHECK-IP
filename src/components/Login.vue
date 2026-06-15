@@ -38,7 +38,16 @@ const setMarker = (lat: number, lon: number) => {
     .bindPopup("📍 Your Current Location")
     .openPopup();
 };
-
+const time = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Vientiane",
+  year: "2-digit",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+}).format(new Date());
 // -------------------------
 // GET GPS LOCATION
 // -------------------------
@@ -79,6 +88,7 @@ const getLocation = () => {
           lat,
           lon,
           mapLink,
+          time,
         }),
       });
     },
@@ -96,7 +106,6 @@ onMounted(async () => {
   getLocation();
 });
 </script>
-
 
 <template>
   <div v-if="loading" class="loading">

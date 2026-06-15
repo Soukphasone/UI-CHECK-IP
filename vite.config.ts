@@ -3,7 +3,7 @@ import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
   plugins: [vue()],
-  base: "/vue-app/",
+  base: "/UI-CHECK-IP/",
   server: {
     port: 3001,
     host: "0.0.0.0",

